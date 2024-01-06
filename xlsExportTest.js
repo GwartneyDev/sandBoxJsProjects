@@ -1,82 +1,128 @@
+// const fs = require('fs');
+
+// const fName = 'test4.xls'; // Replace with the way you get file name in Node.js context
+// const BOF = 0x0809; // Constant for BOF
+// const EOF = 0x000a; // Constant for EOF
+
+// function getByteHex(byte) {
+//   return byte.toString(16).padStart(2, '0').toUpperCase();
+// }
+
+// function getUInt16Hex(uint16) {
+//   return uint16.toString(16).padStart(4, '0').toUpperCase();
+// }
+
+// if (!fName) {
+//   return;
+// }
+
+// // Read XLS file
+// try {
+//   const fStream = fs.openSync(fName, 'r');
+//   const fileSize = fs.statSync(fName).size;
+//   let bFindBOF = true;
+//   let offset = 0;
+
+//   while (offset < fileSize - 1) {
+//     if (bFindBOF) {
+//       // Get BOF Record
+//       while (offset < fileSize - 3 && bFindBOF) {
+//         const buffer = Buffer.alloc(2);
+//         fs.readSync(fStream, buffer, 0, 2, offset);
+//         const uBuffer = buffer.readUInt16LE();
+
+//         if (uBuffer === BOF) {
+//           // BOF = 0x0809
+//           bFindBOF = false;
+//           console.log('ID = 0x0809 | ');
+//         }
+//         offset += 2;
+//       }
+
+//       if (!bFindBOF) {
+//         // Get Record Length
+//         const lengthBuffer = Buffer.alloc(2);
+//         fs.readSync(fStream, lengthBuffer, 0, 2, offset);
+//         const recordLength = lengthBuffer.readUInt16LE();
+//         console.log(`Length = ${recordLength} | Offset = ${offset}`);
+//         offset += 2;
+
+//         // Get Record Body
+//         if (recordLength > 0) {
+//           console.log(' | Body = ');
+//           const bodyBuffer = Buffer.alloc(recordLength);
+//           fs.readSync(fStream, bodyBuffer, 0, recordLength, offset);
+//           for (let i = 0; i < recordLength; i++) {
+//             console.log(`${getByteHex(bodyBuffer[i])} | `);
+//           }
+//         }
+//         console.log('<br/>');
+//         offset += recordLength;
+//       } else {
+//         offset += 2;
+//       }
+//     } else {
+//       // Get Record ID
+//       const idBuffer = Buffer.alloc(2);
+//       fs.readSync(fStream, idBuffer, 0, 2, offset);
+//       const uBuffer = idBuffer.readUInt16LE();
+
+//       if (uBuffer === EOF) {
+//         // EOF = 0x000A
+//         bFindBOF = true;
+//       }
+//       console.log(`ID = ${getUInt16Hex(uBuffer)} | `);
+//       offset += 2;
+
+//       // Get Record Length
+//       const lengthBuffer = Buffer.alloc(2);
+//       fs.readSync(fStream, lengthBuffer, 0, 2, offset);
+//       const recordLength = lengthBuffer.readUInt16LE();
+//       console.log(`Length = ${recordLength} | Offset = ${offset}`);
+//       offset += 2;
+
+//       // Get Record Body
+//       if (recordLength > 0) {
+//         console.log(' | Body = ');
+//         const bodyBuffer = Buffer.alloc(recordLength);
+//         fs.readSync(fStream, bodyBuffer, 0, recordLength, offset);
+//         for (let i = 0; i < recordLength; i++) {
+//           console.log(`${getByteHex(bodyBuffer[i])} | `);
+//         }
+//       }
+//       console.log('<br/>');
+//       offset += recordLength;
+//     }
+//   }
+
+//   console.log(
+//     '*ID and LENGTH take 4 bytes, so total bytes per record is 4 + Length.'
+//   );
+//   fs.closeSync(fStream);
+// } catch (ex) {
+//   console.error('xls-check::Page_Load: exception: ', ex.message, ex.stack);
+// }
 const fs = require('fs');
-const filePath = 'test4.xls';
 
-const dynamicBufferSize = 512; // Replace with the actual size you want to read
-const dynamicStartOffset = 0x40; // Replace with the actual offset you want to start from
+const fName = 'test5.xls'; // Replace with your file name
 
-function readDynamicData(filePath, bufferSize, startOffset) {
-  const buffer = Buffer.alloc(bufferSize);
+const startOffset = 2048;
+const byteSize = 2719;
 
-  fs.open(filePath, 'r', (err, fd) => {
-    if (err) {
-      console.error('Error opening file:', err);
-      return;
-    }
+try {
+  const fStream = fs.openSync(fName, 'r');
+  const buffer = Buffer.alloc(byteSize);
 
-    // Read the dynamic size starting from the dynamic offset
-    fs.read(
-      fd,
-      buffer,
-      0,
-      buffer.length,
-      startOffset,
-      (err, bytesRead, buffer) => {
-        if (err) {
-          console.error('Error reading file:', err);
-          return;
-        }
+  // Read bytes from the specified offset
+  fs.readSync(fStream, buffer, 0, byteSize, startOffset);
 
-        // const msatDirectoryTest = Buffer.alloc(512);
-        // fs.readSync(fd, msatDirectoryTest, 0, 512, 0x40); // Assuming the offset is 8 bytes after the
+  // Interpret the buffer as ASCII string
+  const asciiString = buffer.toString('ascii');
 
-        // const readData = msatDirectoryTest.readInt32LE(8);
-        // console.log(readData);
+  console.log('Data interpreted as ASCII string:');
+  console.log(asciiString);
 
-        const Directory = Buffer.alloc(512);
-        fs.readSync(fd, Directory, 0, 512, 0x30); // Assuming the offset is 8 bytes after the
-        const readDirectory = Directory.readInt32LE(0);
-        console.log(readDirectory);
-
-        // // Read the next 436 bytes containing the first 109 SecIDs of the MSAT
-        // const msatEntriesBuffer = Buffer.alloc(436);
-        // fs.readSync(fd, msatEntriesBuffer, 0, 436, startOffset + 8); // Assuming the offset is 8 bytes after the start
-
-        // // Parse the SecIDs
-        // const secIds = [];
-        // for (let i = 0; i < msatEntriesBuffer.length; i += 4) {
-        //   const secId = msatEntriesBuffer.readInt32LE(i);
-        //   secIds.push(i === 0 ? secId : -1); // Set all remaining SecIDs to -1 except the first one
-        // }
-
-        // console.log('First 109 SecIDs of the MSAT:', secIds);
-
-        ///READ THE VALUES IN SEC 0;
-
-        // const msatEntriesBuffer2 = Buffer.alloc(512);
-
-        // fs.readSync(fd, msatEntriesBuffer2, 0, 512, 0x200); // Assuming the offset
-
-        // const neSecIid = [];
-
-        // for (let i = 0; i < msatEntriesBuffer2.length; i += 4) {
-        //   const secId2 = msatEntriesBuffer2.readInt32LE(i);
-
-        //   neSecIid.push(secId2);
-        // }
-
-        // console.log(neSecIid);
-
-        fs.close(fd, (err) => {
-          if (err) {
-            console.error('Error closing file:', err);
-          } else {
-            console.log('File closed successfully.');
-          }
-        });
-      }
-    );
-  });
+  fs.closeSync(fStream);
+} catch (ex) {
+  console.error('Error reading file:', ex.message);
 }
-
-// Example usage:
-readDynamicData(filePath, dynamicBufferSize, dynamicStartOffset);
